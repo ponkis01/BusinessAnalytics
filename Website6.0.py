@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import joblib
 import os
+import kagglehub
 
 # ------------------------------
 # 1. Konfiguration der Streamlit Seite
@@ -29,7 +30,9 @@ This tool allows you to predict how long an employee will stay at your company b
 # ------------------------------
 st.header("📂 Training Dataset")
 
-training_file_path = "DA_Streamlit/Training.xlsx" 
+# Download latest version
+path = kagglehub.dataset_download("pavansubhasht/ibm-hr-analytics-attrition-dataset")
+
 
 # Training Datensatz war zuerst ein .xls file und das konnte nicht mit openpyxl benutzt werden
 # Könnte aber nach Umwandlung verworfen werden
@@ -53,7 +56,7 @@ def load_training_data(path):
         return None
 
 # Trainingsdaten laden
-train_df = load_training_data(training_file_path)
+train_df = load_training_data(path)
 
 if train_df is not None:
     st.success("Training data loaded successfully!")
