@@ -1,2 +1,11 @@
 streamlit
 kagglehub
+pandas 
+sklearn.preprocessing 
+sksurv.util 
+sksurv.ensemble
+lifelines 
+numpy 
+matplotlib.pyplot 
+joblib
+os
