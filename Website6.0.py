@@ -176,6 +176,7 @@ def get_user_input():
             HourlyRate = st.number_input("Hourly Rate", min_value=0, value=50)
             MonthlyRate = st.number_input("Monthly Rate", min_value=0, value=5000)
             PercentSalaryHike = st.number_input("Percent Salary Hike", min_value=0, value=10)
+            st.session_state["PercentSalaryHike"] = PercentSalaryHike
             StockOptionLevel = st.selectbox("Stock Option Level", options=sorted(train_df['StockOptionLevel'].unique()))
 
         with st.expander("Job Information"):
@@ -396,17 +397,28 @@ if user_input_df is not None:
                 - At year {selected_times[0]}: {surv_probs_selected[0]:.1%} survival probability — most employees stay during the first year.
                 - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
                 """)
-                with st.expander("SOMETHING ABOUT PRODUCTIVITY??"):
-                    st.write("ff")
+                with st.expander("Performance Rating"):
                     if st.session_state.get("PerformanceRating") == 3:
-                        st.warning("Performance Level 3 erkannt: Gehaltserhöhung erforderlich, um Level 4 zu erreichen.")
+                        st.write("The performance rating is excellent. To achieve an outstanding rating, a salary hike is required.")
         
-                        required_hike = st.slider(
-                            "Prozentuale Gehaltserhöhung erforderlich (z. B. 15% vorgeschlagen):",
-                            min_value=0, max_value=50, value=15, step=1
-                        )
-                        st.info(f"Um die Performance von 3 auf 4 zu steigern, sollte der Salary-Hike mindestens **{required_hike}%** betragen.")
-            
+                        # Use current salary hike from the variables above
+                        current_hike = st.session_state.get("PercentSalaryHike", 0)
+
+                        # Threshold for salary hike was calculated with the random Forest modell
+                        threshold_salary_hike = 19.4976806640625
+
+                        # Calculation of the required salary hike
+                        additional_hike_needed = max(0, threshold_salary_hike - current_hike)
+
+                        if additional_hike_needed > 0:
+                            st.info(
+                                f"To increase the performance rating to outstanding, an additional salary hike of at least **{additional_hike_needed}%** is required."
+                            )
+                        else:
+                            st.success("The current salary hike is sufficient to achieve an outstanding performance rating!")
+                    else:
+                        st.success("Performance has reached it's maximum. There is no salary hike required.")
+
 
             with col2:
                 st.pyplot(fig)
