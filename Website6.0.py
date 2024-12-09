@@ -1,14 +1,12 @@
 import streamlit as st
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 from sksurv.util import Surv
 from sksurv.ensemble import RandomSurvivalForest
 from lifelines import KaplanMeierFitter
 import numpy as np
 import matplotlib.pyplot as plt
-import joblib
 import os
-import kagglehub
 
 # ------------------------------
 # 1. Konfiguration der Streamlit Seite
@@ -19,50 +17,29 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Employee Survival Rate Prediction")
-st.write("""
-Welcome to the Employee Survival Prediction Page! 
-This tool allows you to predict how long an employee will stay at your company based on historical data.
-""")
+col1, col2 = st.columns([2, 1])  # Wider column on the left
+with col1:
+    st.title("Employee Survival Rate Prediction")
+    st.write("""
+    Welcome to the Employee Survival Prediction Page! 
+    This tool allows you to predict how long an employee will stay at your company based on historical data.
+    """)
+with col2:
+    st.image("DA_Streamlit/employee.svg", width=350)  # Add a logo or relevant image
 
 # ------------------------------
 # 2. Training Datensatz laden 
 # ------------------------------
 st.header("📂 Training Dataset")
 
-# Download latest version
-path = kagglehub.dataset_download("pavansubhasht/ibm-hr-analytics-attrition-dataset")
-
-
-# Training Datensatz war zuerst ein .xls file und das konnte nicht mit openpyxl benutzt werden
-# Könnte aber nach Umwandlung verworfen werden
-@st.cache_data
-def load_training_data(path):
-    if not os.path.exists(path):
-        st.error(f"Training file '{path}' not found. Please ensure it's in the correct directory.")
-        return None
-    try:
-        file_extension = path.split('.')[-1]
-        if file_extension == 'xlsx':
-            df = pd.read_excel(path, engine="openpyxl")
-        elif file_extension == 'xls':
-            df = pd.read_excel(path, engine="xlrd")
-        else:
-            st.error("Unsupported file format for training data! Please use .xlsx or .xls.")
-            return None
-        return df
-    except Exception as e:
-        st.error(f"Error loading training data: {e}")
-        return None
-
-# Trainingsdaten laden
-train_df = load_training_data(path)
+train_df = pd.read_excel("DA_Streamlit/Training.xlsx")
 
 if train_df is not None:
-    st.success("Training data loaded successfully!")
-    st.write("### Training Dataset Preview")
-    st.dataframe(train_df.head())
+    st.write("Have a small preview of what the your predictions are based on for maximal transparency:")
+    with st.expander("📄 Training Dataset Preview"):
+        st.dataframe(train_df.head())
 else:
+    st.warning('Please input a correct training dataset')
     st.stop()  
 
 # ------------------------------
@@ -80,7 +57,7 @@ numerical_columns = [
     'Age', 'DailyRate', 'DistanceFromHome', 'HourlyRate', 'MonthlyIncome',
     'MonthlyRate', 'NumCompaniesWorked', 'PercentSalaryHike',
     'TotalWorkingYears', 'TrainingTimesLastYear', 'YearsSinceLastPromotion', 'YearsAtCompany',
-    'JobLevel'  # Added JobLevel
+    'JobLevel'  
 ]
 columns_to_encode = [
     'BusinessTravel', 'Department', 'Education', 'EducationField', 'Gender', 
@@ -89,7 +66,6 @@ columns_to_encode = [
     'JobSatisfaction', 'PerformanceRating', 'RelationshipSatisfaction',
     'WorkLifeBalance'
 ]
-
 # Wird spezifisch definiert, da sonst ein error auftritt (Training- und Validation-Datensätze müssen diesselbe Reihenfolge der Variablen haben)
 feature_columns = [
     'Age', 'DailyRate', 'DistanceFromHome', 'HourlyRate', 'MonthlyIncome',
@@ -134,9 +110,6 @@ def preprocess_training_data(df):
 
 with st.spinner("Preprocessing training data..."):
     train_df_processed, label_encoder = preprocess_training_data(train_df)
-    st.success("Training data preprocessing completed!")
-
-
 
 # ------------------------------
 # 4. Modell Training
@@ -176,12 +149,6 @@ with st.spinner("Generating Kaplan-Meier survival curve..."):
     try:
         kmf = KaplanMeierFitter()
         kmf.fit(durations=train_df_processed['YearsAtCompany'], event_observed=train_df_processed['Attrition'])
-        
-        fig_km, ax_km = plt.subplots(figsize=(10,6))
-        kmf.plot_survival_function(ax=ax_km)
-        ax_km.set_title("Kaplan-Meier Survival Curve")
-        ax_km.set_xlabel("Time (Years)")
-        ax_km.set_ylabel("Survival Probability")
 
     except Exception as e:
         st.error(f"Error generating Kaplan-Meier curve: {e}")
@@ -199,39 +166,49 @@ Provide the details of the employee you want to analyze. The application will pr
 def get_user_input():
     with st.form("employee_form"):
         st.subheader("📝 Enter Employee Details")
-        Age = st.number_input("Age", min_value=18, max_value=100, value=30)
-        DailyRate = st.number_input("Daily Rate", min_value=0, value=500)
-        DistanceFromHome = st.number_input("Distance From Home (in miles)", min_value=0, value=10)
-        HourlyRate = st.number_input("Hourly Rate", min_value=0, value=50)
-        MonthlyIncome = st.number_input("Monthly Income", min_value=0, value=5000)
-        MonthlyRate = st.number_input("Monthly Rate", min_value=0, value=5000)
-        NumCompaniesWorked = st.number_input("Number of Companies Worked", min_value=0, value=1)
-        PercentSalaryHike = st.number_input("Percent Salary Hike", min_value=0, value=10)
-        TotalWorkingYears = st.number_input("Total Working Years", min_value=0, value=5)
-        TrainingTimesLastYear = st.number_input("Training Times Last Year", min_value=0, value=1)
-        YearsSinceLastPromotion = st.number_input("Years Since Last Promotion", min_value=0, value=2)
-        YearsAtCompany = st.number_input("Years at Company", min_value=0, value=3)
-        
-        # Kategorischer Input
-        BusinessTravel = st.selectbox("Business Travel", options=sorted(train_df['BusinessTravel'].unique()))
-        Department = st.selectbox("Department", options=sorted(train_df['Department'].unique()))
-        Education = st.selectbox("Education", options=sorted(train_df['Education'].unique()))
-        EducationField = st.selectbox("Education Field", options=sorted(train_df['EducationField'].unique()))
-        Gender = st.selectbox("Gender", options=sorted(train_df['Gender'].unique()))
-        JobRole = st.selectbox("Job Role", options=sorted(train_df['JobRole'].unique()))
-        MaritalStatus = st.selectbox("Marital Status", options=sorted(train_df['MaritalStatus'].unique()))
-        OverTime = st.selectbox("Over Time", options=sorted(train_df['OverTime'].unique()))
-        Over18 = st.selectbox("Over 18", options=sorted(train_df['Over18'].unique()))
-        
-        StockOptionLevel = st.selectbox("Stock Option Level", options=sorted(train_df['StockOptionLevel'].unique()))
-        EnvironmentSatisfaction = st.selectbox("Environment Satisfaction", options=sorted(train_df['EnvironmentSatisfaction'].unique()))
-        JobInvolvement = st.selectbox("Job Involvement", options=sorted(train_df['JobInvolvement'].unique()))
-        JobSatisfaction = st.selectbox("Job Satisfaction", options=sorted(train_df['JobSatisfaction'].unique()))
-        PerformanceRating = st.selectbox("Performance Rating", options=sorted(train_df['PerformanceRating'].unique()))
-        RelationshipSatisfaction = st.selectbox("Relationship Satisfaction", options=sorted(train_df['RelationshipSatisfaction'].unique()))
-        WorkLifeBalance = st.selectbox("Work Life Balance", options=sorted(train_df['WorkLifeBalance'].unique()))
-        
-        JobLevel = st.number_input("Job Level", min_value=1, max_value=5, value=1)
+        with st.expander("Demographics"):
+            Age = st.number_input("Age", min_value=18, max_value=100, value=30)
+            Gender = st.selectbox("Gender", options=sorted(train_df['Gender'].unique()))
+            MaritalStatus = st.selectbox("Marital Status", options=sorted(train_df['MaritalStatus'].unique()))
+            Over18 = st.selectbox("Over 18", options=sorted(train_df['Over18'].unique()))
+
+        with st.expander("Compensation and Benefits"):
+            MonthlyIncome = st.number_input("Monthly Income", min_value=0, value=5000)
+            DailyRate = st.number_input("Daily Rate (max 1499)", min_value=0, value=500)
+            HourlyRate = st.number_input("Hourly Rate", min_value=0, value=50)
+            MonthlyRate = st.number_input("Monthly Rate", min_value=0, value=5000)
+            PercentSalaryHike = st.number_input("Percent Salary Hike", min_value=0, value=10)
+            StockOptionLevel = st.selectbox("Stock Option Level", options=sorted(train_df['StockOptionLevel'].unique()))
+
+        with st.expander("Job Information"):
+            JobRole = st.selectbox("Job Role", options=sorted(train_df['JobRole'].unique()))
+            Department = st.selectbox("Department", options=sorted(train_df['Department'].unique()))
+            JobLevel = st.number_input("Job Level", min_value=1, max_value=5, value=1)
+            YearsAtCompany = st.number_input("Years at Company", min_value=0, value=3)
+            YearsSinceLastPromotion = st.number_input("Years Since Last Promotion", min_value=0, value=2)
+            TrainingTimesLastYear = st.number_input("Training Times Last Year", min_value=0, value=1)
+            OverTime = st.selectbox("Over Time", options=sorted(train_df['OverTime'].unique()))
+
+        with st.expander("Work Environment Satisfaction"):
+
+            EnvironmentSatisfaction = st.selectbox("Environment Satisfaction", options=sorted(train_df['EnvironmentSatisfaction'].unique()))
+            JobSatisfaction = st.selectbox("Job Satisfaction", options=sorted(train_df['JobSatisfaction'].unique()))
+            RelationshipSatisfaction = st.selectbox("Relationship Satisfaction", options=sorted(train_df['RelationshipSatisfaction'].unique()))
+            WorkLifeBalance = st.selectbox("Work Life Balance", options=sorted(train_df['WorkLifeBalance'].unique()))
+
+        with st.expander("Experience and Background"):
+            TotalWorkingYears = st.number_input("Total Working Years", min_value=0, value=5)
+            NumCompaniesWorked = st.number_input("Number of Companies Worked", min_value=0, value=1)
+            Education = st.selectbox("Education", options=sorted(train_df['Education'].unique()))
+            EducationField = st.selectbox("Education Field", options=sorted(train_df['EducationField'].unique()))
+
+        with st.expander("Performance Metrics"):        
+            PerformanceRating = st.selectbox("Performance Rating", options=sorted(train_df['PerformanceRating'].unique()))
+            JobInvolvement = st.selectbox("Job Involvement", options=sorted(train_df['JobInvolvement'].unique()))
+
+        with st.expander("Travel and Commute"):
+            DistanceFromHome = st.number_input("Distance From Home (in miles, max 29)", min_value=0, value=10)
+            BusinessTravel = st.selectbox("Business Travel", options=sorted(train_df['BusinessTravel'].unique()))
         
         submit_button = st.form_submit_button(label='Predict Turnover')
     
@@ -310,6 +287,7 @@ if user_input_df is not None:
             
             X_user = X_user[feature_columns]
             
+            #Fehlende Features behandeln
             missing_features = set(feature_columns) - set(X_user.columns)
             for feature in missing_features:
                 X_user[feature] = 0  
@@ -342,225 +320,97 @@ if user_input_df is not None:
             
             # Survival Probility extracten 
             surv_func = list(survival_functions)[0]
+            print(surv_func)
             times = surv_func.x
             survival_prob = surv_func.y
-            
+
             # Plot
-            fig_user, ax_user = plt.subplots(figsize=(10,6))
-            ax_user.step(times, survival_prob, where="post", label="Predicted Survival")
-            ax_user.set_xlabel("Time (Years)")
-            ax_user.set_ylabel("Survival Probability")
-            ax_user.set_title("Predicted Survival Function for the Employee")
-            ax_user.set_ylim(0, 1)
-            ax_user.legend()
+            st.write("### Predicted Survival Function")
+            fig, ax = plt.subplots(figsize=(10,6))
+            ax.step(times, survival_prob, where="post", label="Predicted Survival", linestyle='--', color='blue')
+            ax.set_xlabel("Time (Years)", fontsize=12)
+            ax.set_ylabel("Survival Probability", fontsize=12)
+            ax.set_title("Predicted Survival Function for the Employee", fontsize=14)
+            ax.set_ylim(0, 1)
+            ax.legend(fontsize=10)
+
+            ax.axhline(0.5, color='gray', linestyle='--', linewidth=0.7, label="50% Probability Line")
+            ax.annotate("50% Probability", xy=(times[len(times)//2], 0.5), xytext=(5, 0.55),
+            arrowprops=dict(facecolor='black', arrowstyle="->"), fontsize=10)
             
             # Plot der allgemeinen Kaplan-Meier Survival Kurve
             kmf = KaplanMeierFitter()
             kmf.fit(durations=train_df_processed['YearsAtCompany'], event_observed=train_df_processed['Attrition'])
-            kmf.plot_survival_function(ax=ax_user, label="Overall KM Survival")
-        
+            kmf.plot_survival_function(ax=ax, label="Mean Survival Probability", color='orange')
+
             
             # Survival Probabilities an verschiedenen Zeitpunkten
             st.write("### Survival Probabilities at Specific Time Points")
             selected_times = st.multiselect(
                 "Select time points (Years) to view survival probabilities:",
                 options=np.unique(times.round(2)),
-                default=[1, 2, 3, 4, 5]
+                default=[1, 2, 3, 4, 5, 10]
             )
-            if selected_times:
-                surv_probs_selected = np.interp(selected_times, surv_func.x, surv_func.y)
-                
-                survival_dict = {time: prob for time, prob in zip(selected_times, surv_probs_selected)}
-                surv_probs_df = pd.DataFrame(list(survival_dict.items()), columns=['Time (Years)', 'Survival Probability'])
-                st.table(surv_probs_df)
+            surv_probs_selected = np.interp(selected_times, surv_func.x, surv_func.y)
+            surv_probs_df = pd.DataFrame({
+                'Time (Years)': selected_times,
+                'Survival Probability': surv_probs_selected
+            })
+
+            # Add an insights column
+            def generate_insight(prob):
+                if prob > 0.7:
+                    return "High probability of staying"
+                elif prob > 0.6:
+                    return "Moderate probability of staying"
+                else:
+                    return "High risk of leaving"
+
+            surv_probs_df['Insight'] = surv_probs_df['Survival Probability'].apply(generate_insight)
+
+            # Display the table
+            st.write("### Survival Probabilities and Insights")
+            #st.table(surv_probs_df)
+
+            # Function to apply colors to cells
+            def color_survival(val):
+                if val > 0.7:
+                    return 'background-color: green'
+                elif val > 0.4:
+                    return 'background-color: yellow'
+                else:
+                    return 'background-color: lightcoral'
+
+            # Apply color styling
+            styled_table = surv_probs_df.style.applymap(color_survival, subset=['Survival Probability'])
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Display the styled table
+                st.dataframe(styled_table)
+
+                predicted_year = 3  # Example year
+                predicted_survival = np.interp(predicted_year, surv_func.x, surv_func.y)
+                with st.expander("🔍 Prediction Insight:"):
+                    st.write(f"""
+                - At year {selected_times[0]}: {surv_probs_selected[0]:.1%} survival probability — most employees stay during the first year.
+                - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
+                """)
+                with st.expander("SOMETHING ABOUT PRODUCTIVITY??"):
+                    st.write("ff")        
+            
+
+            with col2:
+                st.pyplot(fig)
+                st.write(f"")
+                with st.expander("Understand what this graph means"):
+                    st.write("""
+                    Imagine you have a group of employees, and you want to track how long they stay at the company before leaving. The Kaplan-Meier curve shows the probability of employees staying with the company over time.
+                    - The curve starts at 100%, because at the beginning, everyone is still at the company.
+                    - As time goes on, the curve gradually drops, reflecting that some employees leave.
+                    """)
         except Exception as e:
             st.error(f"Error during prediction: {e}")
-
-    # ------------------------------
-   # 9. Variable Manipulation Tool
-    # ------------------------------
-    st.header("🔧 Variable Manipulation Tool")
-
-    st.write("""
-    Use the controls below to adjust the values of key variables and observe how they affect the employee's survival probability.
-    This tool helps identify which variables have the most significant impact on improving employee retention.
-    """)
-
-    st.subheader("🛠️ Adjust Variables")
-
-    # Initialize session state for manipulated variables
-    if 'manipulated_input_done' not in st.session_state:
-        st.session_state.manipulated_input_done = False
-        st.session_state.manipulated_survival_prob = None
-        st.session_state.manipulated_times = None
-
-    with st.expander("Open Variable Manipulation Controls"):
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            Manip_JobLevel = st.slider("Job Level", min_value=1, max_value=5, value=1, help="Adjust the job level (1-5).")
-            Manip_OverTime = st.selectbox("Over Time", options=['Yes', 'No'], index=0, help="Adjust the overtime status.")
-        
-        with col2:
-            Manip_EnvironmentSatisfaction = st.selectbox("Environment Satisfaction", options=['Low', 'Medium', 'High', 'Very High'], index=1, help="Adjust the environment satisfaction level.")
-            Manip_StockOptionLevel = st.slider("Stock Option Level", min_value=0, max_value=3, value=0, help="Adjust the stock option level.")
-        
-        with col3:
-            Manip_JobSatisfaction = st.selectbox("Job Satisfaction", options=['Low', 'Medium', 'High', 'Very High'], index=1, help="Adjust the job satisfaction level.")
-        
-        manipulate_button = st.button("Update Survival Probability")
-
-    if manipulate_button:
-        with st.spinner("Updating survival probability based on manipulated variables..."):
-            try:
-                # Create a copy of the original user input data
-                manipulated_input = user_input_df.copy()
-                
-                # Update the manipulated variables in the raw input data
-                manipulated_input['JobLevel'] = Manip_JobLevel
-                manipulated_input['OverTime'] = Manip_OverTime
-                manipulated_input['EnvironmentSatisfaction'] = Manip_EnvironmentSatisfaction
-                manipulated_input['StockOptionLevel'] = Manip_StockOptionLevel
-                manipulated_input['JobSatisfaction'] = Manip_JobSatisfaction
-                
-                # Preprocess the manipulated input data
-                manipulated_user_df = manipulated_input.drop(drop_columns, axis=1, errors='ignore')
-                manipulated_user_df[categorical_columns] = manipulated_user_df[categorical_columns].astype('category')
-                
-                # Handle missing values if any
-                if manipulated_user_df.isnull().sum().sum() > 0:
-                    st.warning("Manipulated input data contains missing values. Filling missing values by dropping rows.")
-                    manipulated_user_df = manipulated_user_df.dropna()
-                
-                # Scale numerical columns using the scaler fitted on training data
-                
-                # Encode categorical variables using the label encoder fitted on training data
-                for col in columns_to_encode:
-                    le = label_encoder[col]
-                    # Handle unseen labels
-                    if manipulated_user_df[col].iloc[0] in le.classes_:
-                        manipulated_user_df[col] = le.transform(manipulated_user_df[col])
-                    else:
-                        st.warning(f"Value '{manipulated_user_df[col].iloc[0]}' for '{col}' not seen in training data. Encoding as 0.")
-                        manipulated_user_df[col] = 0  # Default encoding
-                    manipulated_user_df[col] = manipulated_user_df[col].astype('category')
-                
-                # Prepare the final input for prediction
-                X_manipulated = manipulated_user_df.drop(['YearsAtCompany'], axis=1, errors='ignore')
-                
-                # Reorder and select only the required features
-                X_manipulated = X_manipulated[feature_columns]
-                
-                # Optional: Handle any missing features by adding them with default values
-                missing_features = set(feature_columns) - set(X_manipulated.columns)
-                for feature in missing_features:
-                    X_manipulated[feature] = 0  # Adjust default values as appropriate
-                
-                # Identify and remove extra features
-                extra_features = set(X_manipulated.columns) - set(feature_columns)
-                if extra_features:
-                    X_manipulated = X_manipulated.drop(columns=extra_features)
-                
-                # Verify that all required features are present
-                required_features = X_train.columns.tolist()
-                missing_features_final = set(required_features) - set(X_manipulated.columns)
-                if missing_features_final:
-                    st.error(f"The following required features are missing in the manipulated input: {missing_features_final}")
-                    st.stop()
-                
-                # Reorder the columns to match training data
-                X_manipulated = X_manipulated[required_features]
-                
-                # Predict survival function for the manipulated input
-                manipulated_survival_functions = rsf_model.predict_survival_function(X_manipulated)
-                manipulated_surv_func = list(manipulated_survival_functions)[0]
-                manipulated_times = manipulated_surv_func.x
-                manipulated_survival_prob = manipulated_surv_func.y
-                
-                # Store in session state
-                st.session_state.manipulated_survival_prob = manipulated_survival_prob
-                st.session_state.manipulated_times = manipulated_times
-                st.session_state.manipulated_input_done = True
-                
-                st.success("Survival probability updated based on manipulated variables!")
-            except Exception as e:
-                st.error(f"Error during variable manipulation: {e}")
-
-    # ------------------------------
-    # 10. Display Manipulated Survival Function and Recommendations
-    # ------------------------------
-
-    if st.session_state.get('manipulated_input_done', False):
-        with st.spinner("Displaying manipulated survival probability..."):
-            try:
-                manipulated_surv_prob = st.session_state.manipulated_survival_prob
-                manipulated_times = st.session_state.manipulated_times
-                
-                # Plot the manipulated survival function
-                fig_manip, ax_manip = plt.subplots(figsize=(10,6))
-                ax_manip.step(manipulated_times, manipulated_surv_prob, where="post", label="Manipulated Survival")
-                ax_manip.set_xlabel("Time (Years)")
-                ax_manip.set_ylabel("Survival Probability")
-                ax_manip.set_title("Survival Function After Variable Manipulation")
-                ax_manip.set_ylim(0, 1)
-                ax_manip.legend()
-                
-                # Plot the original survival function for comparison
-                # Retrieve original survival function from user input
-                survival_functions = rsf_model.predict_survival_function(X_user)
-                surv_func = list(survival_functions)[0]
-                times = surv_func.x
-                survival_prob = surv_func.y
-                ax_manip.step(times, survival_prob, where="post", label="Original Survival", linestyle='--')
-                ax_manip.legend()
-                
-                st.pyplot(fig_manip)
-                
-                # Display survival probabilities at specific time points for manipulated input
-                st.write("### Survival Probabilities at Specific Time Points (Manipulated)")
-                manipulated_selected_times = st.multiselect(
-                    "Select time points (Years) to view manipulated survival probabilities:",
-                    options=np.unique(manipulated_times.round(2)),
-                    default=[1, 2, 3, 4, 5]
-                )
-                if manipulated_selected_times:
-                    # Using NumPy's interp for interpolation
-                    manipulated_surv_probs_selected = np.interp(manipulated_selected_times, manipulated_times, manipulated_surv_prob)
-                    
-                    survival_dict_manip = {time: prob for time, prob in zip(manipulated_selected_times, manipulated_surv_probs_selected)}
-                    surv_probs_df_manip = pd.DataFrame(list(survival_dict_manip.items()), columns=['Time (Years)', 'Survival Probability'])
-                    st.table(surv_probs_df_manip)
-                
-                # ------------------------------
-                # 11. Feature Importances and Recommendations
-                # ------------------------------
-                
-                st.subheader("📊 Feature Importances")
-                feature_importances = pd.Series(rsf_model.feature_importances_, index=X_train.columns)
-                feature_importances = feature_importances.sort_values(ascending=False)
-                fig_imp_manip, ax_imp_manip = plt.subplots(figsize=(10,6))
-                feature_importances.plot(kind='bar', ax=ax_imp_manip)
-                ax_imp_manip.set_title("Feature Importances")
-                ax_imp_manip.set_ylabel("Importance Score")
-                ax_imp_manip.set_xlabel("Features")
-                st.pyplot(fig_imp_manip)
-                
-                # Recommendations based on top features
-                top_features = feature_importances.head(5).index.tolist()
-                st.subheader("💡 Recommendations")
-                st.write("""
-                Based on the feature importances, the following variables have the most significant impact on improving employee retention:
-                """)
-                for i, feature in enumerate(top_features, 1):
-                    st.markdown(f"**{i}. {feature}**")
-                
-                st.write("""
-                **Recommendations:**
-                - **Focus on improving these areas to enhance employee retention.**
-                - **Consider implementing training programs, offering competitive stock options, and addressing job satisfaction concerns.**
-                """)
-                
-            except Exception as e:
-                st.error(f"Error displaying manipulated survival probability: {e}")
-
+    
    
