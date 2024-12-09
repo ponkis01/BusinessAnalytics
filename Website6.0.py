@@ -24,23 +24,21 @@ with col1:
     Welcome to the Employee Survival Prediction Page! 
     This tool allows you to predict how long an employee will stay at your company based on historical data.
     """)
-with col2:
-    st.image("DA_Streamlit/employee.svg", width=350)  # Add a logo or relevant image
+
 
 # ------------------------------
 # 2. Training Datensatz laden 
 # ------------------------------
 st.header("📂 Training Dataset")
 
-train_df = pd.read_excel("DA_Streamlit/Training.xlsx")
+# URL zur Datei im GitHub-Repository
+url = "https://raw.githubusercontent.com/ponkis01/BusinessAnalytics/refs/heads/main/WA_Fn-UseC_-HR-Employee-Attrition.csv"
+# XLSX-Datei in einen DataFrame laden
+train_df = pd.read_csv(url)
 
-if train_df is not None:
-    st.write("Have a small preview of what the your predictions are based on for maximal transparency:")
-    with st.expander("📄 Training Dataset Preview"):
-        st.dataframe(train_df.head())
-else:
-    st.warning('Please input a correct training dataset')
-    st.stop()  
+# Überprüfung der geladenen Daten
+print(train_df.head())
+
 
 # ------------------------------
 # 3. Preprocessing der Daten
