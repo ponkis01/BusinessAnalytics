@@ -398,6 +398,7 @@ if user_input_df is not None:
                 - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
                 """)
                 with st.expander("Performance Rating"):
+                    st.write("To change the performance rating from 3 to 4 there must be a salary hike of at least 19.49768%")
                     if st.session_state.get("PerformanceRating") == 3:
                         st.write("The performance rating is excellent. To achieve an outstanding rating, a salary hike is required.")
         
@@ -405,7 +406,7 @@ if user_input_df is not None:
                         current_hike = st.session_state.get("PercentSalaryHike", 0)
 
                         # Threshold for salary hike was calculated with the random Forest modell
-                        threshold_salary_hike = 19.4976806640625
+                        threshold_salary_hike = 19.49768
 
                         # Calculation of the required salary hike
                         additional_hike_needed = max(0, threshold_salary_hike - current_hike)
