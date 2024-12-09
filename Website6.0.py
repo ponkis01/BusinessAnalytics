@@ -202,6 +202,7 @@ def get_user_input():
 
         with st.expander("Performance Metrics"):        
             PerformanceRating = st.selectbox("Performance Rating", options=sorted(train_df['PerformanceRating'].unique()))
+            st.session_state["PerformanceRating"] = PerformanceRating
             JobInvolvement = st.selectbox("Job Involvement", options=sorted(train_df['JobInvolvement'].unique()))
 
         with st.expander("Travel and Commute"):
@@ -396,7 +397,17 @@ if user_input_df is not None:
                 - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
                 """)
                 with st.expander("SOMETHING ABOUT PRODUCTIVITY??"):
-                    st.write("ff")        
+                    st.write("ff")
+                    if st.session_state.get("PerformanceRating") == 3:
+                        st.warning("Performance Level 3 erkannt: Gehaltserhöhung erforderlich, um Level 4 zu erreichen.")
+        
+                        required_hike = st.slider(
+                            "Prozentuale Gehaltserhöhung erforderlich (z. B. 15% vorgeschlagen):",
+                            min_value=0, max_value=50, value=15, step=1
+                        )
+                        st.info(f"Um die Performance von 3 auf 4 zu steigern, sollte der Salary-Hike mindestens **{required_hike}%** betragen.")
+                    else:
+                        st.success("Keine Gehaltserhöhung erforderlich.")    
             
 
             with col2:
