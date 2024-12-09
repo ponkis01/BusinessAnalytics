@@ -406,8 +406,6 @@ if user_input_df is not None:
                             min_value=0, max_value=50, value=15, step=1
                         )
                         st.info(f"Um die Performance von 3 auf 4 zu steigern, sollte der Salary-Hike mindestens **{required_hike}%** betragen.")
-                    else:
-                        st.success("Keine Gehaltserhöhung erforderlich.")    
             
 
             with col2:
