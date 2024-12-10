@@ -397,10 +397,9 @@ if user_input_df is not None:
                 - At year {selected_times[0]}: {surv_probs_selected[0]:.1%} survival probability — most employees stay during the first year.
                 - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
                 """)
-                with st.expander("Performance Rating"):
-                    st.write("To change the performance rating from 3 to 4 there must be a salary hike")
+                with st.expander("Performance Rating:"):
                     if st.session_state.get("PerformanceRating") == 3:
-                        st.write("The performance rating is excellent. To improve it from excellent to outstanding, a salary hike is required.")
+                        st.warning("A salary hike is required to improve the performance rating from 3 to 4!")
         
                         # Use current salary hike from the variables above
                         current_hike = st.session_state.get("PercentSalaryHike", 0)
@@ -412,13 +411,13 @@ if user_input_df is not None:
                         additional_hike_needed = max(0, threshold_salary_hike - current_hike)
 
                         if additional_hike_needed > 0:
-                            st.info(
-                                f"To increase the performance rating to outstanding, an additional salary hike of at least **{additional_hike_needed: .4f}%** is required."
+                            st.write(
+                                f"An additional salary hike of **{additional_hike_needed:.4f}%** is needed to achieve an outstanding performance rating."
                             )
                         else:
                             st.success("The current salary hike is sufficient to achieve an outstanding performance rating!")
                     else:
-                        st.success("Performance has reached it's maximum. There is no salary hike required.")
+                        st.success("The performance has reached it's maximum. No additional salary hike is required!")
 
 
 
