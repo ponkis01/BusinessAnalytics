@@ -359,7 +359,6 @@ if user_input_df is not None:
                 'Survival Probability': surv_probs_selected
             })
 
-            # Add an insights column
             def generate_insight(prob):
                 if prob > 0.7:
                     return "High probability of staying"
@@ -370,11 +369,9 @@ if user_input_df is not None:
 
             surv_probs_df['Insight'] = surv_probs_df['Survival Probability'].apply(generate_insight)
 
-            # Display the table
             st.write("### Survival Probabilities and Insights")
-            #st.table(surv_probs_df)
 
-            # Function to apply colors to cells
+            # Farben
             def color_survival(val):
                 if val > 0.7:
                     return 'background-color: green'
@@ -383,16 +380,16 @@ if user_input_df is not None:
                 else:
                     return 'background-color: lightcoral'
 
-            # Apply color styling
+
             styled_table = surv_probs_df.style.applymap(color_survival, subset=['Survival Probability'])
 
             col1, col2 = st.columns(2)
 
             with col1:
-                # Display the styled table
+
                 st.dataframe(styled_table)
 
-                predicted_year = 3  # Example year
+                predicted_year = 3  
                 predicted_survival = np.interp(predicted_year, surv_func.x, surv_func.y)
                 with st.expander("🔍 Prediction Insight:"):
                     st.write(f"""
@@ -403,13 +400,13 @@ if user_input_df is not None:
                     if st.session_state.get("PerformanceRating") == 3:
                         st.warning("A salary hike is required to improve the performance rating from 3 to 4!")
         
-                        # Use current salary hike from the variables above
+                        # Salary hike verwendet
                         current_hike = st.session_state.get("PercentSalaryHike", 0)
 
-                        # Threshold for salary hike was calculated with the random Forest modell
+                        # Threshold für salary hike wurde mit Random Forest berechnet
                         threshold_salary_hike = 19.49768
 
-                        # Calculation of the required salary hike
+                        # Berechnung der benötigten salary hike
                         additional_hike_needed = max(0, threshold_salary_hike - current_hike)
 
                         if additional_hike_needed > 0:
