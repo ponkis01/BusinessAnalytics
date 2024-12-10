@@ -24,6 +24,8 @@ with col1:
     Welcome to the Employee Survival Prediction Page! 
     This tool allows you to predict how long an employee will stay at your company based on historical data.
     """)
+with col2:
+    st.image("https://raw.githubusercontent.com/ponkis01/BusinessAnalytics/refs/heads/main/employee.svg", width=350)
 
 
 # ------------------------------
