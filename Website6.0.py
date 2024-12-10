@@ -398,9 +398,9 @@ if user_input_df is not None:
                 - At year {selected_times[-1]}: {surv_probs_selected[-1]:.1%} survival probability — fewer employees remain with the company long-term.
                 """)
                 with st.expander("Performance Rating"):
-                    st.write("To change the performance rating from 3 to 4 there must be a salary hike of at least 19.49768%")
+                    st.write("To change the performance rating from 3 to 4 there must be a salary hike")
                     if st.session_state.get("PerformanceRating") == 3:
-                        st.write("The performance rating is excellent. To achieve an outstanding rating, a salary hike is required.")
+                        st.write("The performance rating is excellent. To improve it from excellent to outstanding, a salary hike is required.")
         
                         # Use current salary hike from the variables above
                         current_hike = st.session_state.get("PercentSalaryHike", 0)
@@ -413,12 +413,13 @@ if user_input_df is not None:
 
                         if additional_hike_needed > 0:
                             st.info(
-                                f"To increase the performance rating to outstanding, an additional salary hike of at least **{additional_hike_needed}%** is required."
+                                f"To increase the performance rating to outstanding, an additional salary hike of at least **{additional_hike_needed: .4f}%** is required."
                             )
                         else:
                             st.success("The current salary hike is sufficient to achieve an outstanding performance rating!")
                     else:
                         st.success("Performance has reached it's maximum. There is no salary hike required.")
+
 
 
             with col2:
