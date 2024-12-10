@@ -414,8 +414,8 @@ if user_input_df is not None:
                             st.write(
                                 f"An additional salary hike of **{additional_hike_needed:.4f}%** is needed to achieve an outstanding performance rating."
                             )
-                        else:
-                            st.success("The current salary hike is sufficient to achieve an outstanding performance rating!")
+                        else: 
+                            st.success("The performance has reached it's maximum. No additional salary hike is required!")
                     else:
                         st.success("The performance has reached it's maximum. No additional salary hike is required!")
 
