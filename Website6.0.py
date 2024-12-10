@@ -400,13 +400,13 @@ if user_input_df is not None:
                     if st.session_state.get("PerformanceRating") == 3:
                         st.warning("A salary hike is required to improve the performance rating from 3 to 4!")
         
-                        # Salary hike verwendet
+                        #Salary hike von oben wird hier übernommen
                         current_hike = st.session_state.get("PercentSalaryHike", 0)
 
-                        # Threshold für salary hike wurde mit Random Forest berechnet
+                        # Schwellenwert für den Salary Hike wurde mithilfe des Random Forest Modells berechnet(Siehe Notebook)
                         threshold_salary_hike = 19.49768
 
-                        # Berechnung der benötigten salary hike
+                        # Berechnung des noch benötigten Salary hike 
                         additional_hike_needed = max(0, threshold_salary_hike - current_hike)
 
                         if additional_hike_needed > 0:
